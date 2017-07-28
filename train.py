@@ -8,38 +8,13 @@ Created on Tue Jul 18 13:47:57 2017
 import csv
 import cv2
 import numpy as np
-cv2.calibrateCamera()
-cv2.undistort()
-lines = []
-with open('data/driving_log.csv') as csvfile:
-    reader = csv.reader(csvfile)
-    for line in reader:
-        lines.append(line)
-        
-del lines[0]
-        
-images = []
-measurements = []
+import utilties
+from sklearn.model_selection import train_test_split
 
-for line in lines:
-    for i in range(3):    
-        source_path =  line[i]
-        filename = source_path.split('/')[-1]
-        current_path = 'data/IMG/' + filename
-        image = cv2.imread(current_path)
-        images.append(image)    
-        if i==0:
-            image_flip = np.fliplr(image)
-            images.append(image_flip)
-        
-    correction = -0.2
-    measurement = float(line[3])
-    measurements.append(measurement)
-    measurements.append(-measurement)
-    measurements.append(measurement + correction)
-    measurements.append(measurement - correction)
-x_train = np.array(images)
-y_train = np.array(measurements)
+epochs = 10
+samplers_per_epoch = 400
+validation_sampler = 80
+DRIVING_FILE = 'data/driving_log.csv'
 
 from keras.models import Sequential
 from keras.layers import Flatten, Dense, Lambda
@@ -59,9 +34,17 @@ model.add(Dense(120))
 model.add(Dense(84))
 model.add(Dense(1))
 
-
 model.compile(loss='mse',optimizer='adam')
-model.fit(x_train,y_train, validation_split=0.2,shuffle=True,epochs=10)
+
+samples = utilties.get_csv_data(DRIVING_FILE)
+train_samples, validation_samples = train_test_split(samples,test_size=0.2)
+
+train_gen = utilties.generate_batch(train_samples)
+valid_gen = utilties.generate_batch(validation_samples)
+
+history = model.fit_generator(train_gen,epochs=10,steps_per_epoch = samplers_per_epoch,
+                    validation_data=valid_gen,validation_steps=validation_sampler,
+                    verbose = 1)
 
 model.save('model.h5')
-exit()
+#exit()
