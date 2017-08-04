@@ -9,25 +9,25 @@ import numpy as np
 import cv2
 import sklearn.utils
 from sklearn.model_selection import train_test_split
+import random
 DRIVING_FILE = 'data/driving_log.csv'
 CORRECTION = 0.23
 
+lines = []
 def transform_csv_data(csv_file):
-    lines = []
-    with open(csv_file) as csvfile:
-        reader = csv.reader(csvfile)
+
+    with open(csv_file) as file:
+        reader = csv.reader(file)
         for line in reader:
             out_line = line
             for i in range(3):
                 out_line[i] = 'IMG/' + out_line[i].split('\\')[-1]
             lines.append(out_line)        
-    
-    with open('hehe.csv') as csvfile:
-        csv.writer()
-    
-    
-
-
+    with open('hehe.csv','w',newline='') as outfile:
+       writer = csv.writer(outfile)
+       for line in lines:          
+           writer.writerow(line)  
+       outfile.close()
 
 def get_csv_data(csv_file):
     lines = []
@@ -42,31 +42,32 @@ def get_csv_data(csv_file):
 def generate_batch(samples,batch_size = 64):
     num_samples = len(samples)
     while True:
-        X_batch = []
-        y_batch = []
-        rnd_index = np.random.randint(0,num_samples,batch_size)
-        for index in rnd_index:
-            rnd_image = np.random.randint(0,3)
-            image = cv2.imread('data/IMG/'+samples[index][rnd_image].split('/')[-1])        
+        random.shuffle(samples)
+        for offset in range(0,num_samples,batch_size):
+            batch_samples = samples[offset:offset+batch_size]
+            X_batch = []
+            y_batch = []
+            for batch_sample in batch_samples:
+                rnd_image = np.random.randint(0,3)
+                image = cv2.imread('data/IMG/'+batch_sample[rnd_image].split('/')[-1])   
+                if rnd_image == 0:
+                    y_batch.append(float(batch_sample[3]))
+                elif rnd_image == 1:
+                    y_batch.append(float(batch_sample[3])+CORRECTION)
+                else:
+                    y_batch.append(float(batch_sample[3])-CORRECTION)    
+                X_batch.append(image)
+                
+            X_batch = np.array(X_batch)
+            y_batch = np.array(y_batch)
+            yield X_batch,y_batch
+        
+        
+#samples = get_csv_data(DRIVING_FILE)
+#train_samples, validation_samples = train_test_split(samples,test_size=0.2)
 
-            if rnd_image == 0:
-                y_batch.append(float(samples[index][3]))
-            elif rnd_image == 1:
-                y_batch.append(float(samples[index][3])+CORRECTION)
-            else:
-                y_batch.append(float(samples[index][3])-CORRECTION)            
-            X_batch.append(image)
-        
-        X_batch = np.array(X_batch)
-        y_batch = np.array(y_batch)
-        return X_batch,y_batch
-        
-        
-samples = get_csv_data(DRIVING_FILE)
-train_samples, validation_samples = train_test_split(samples,test_size=0.2)
-
-train_gen,y_gen = generate_batch(train_samples)
-valid_gen = generate_batch(validation_samples)
+#train_gen,y_gen = generate_batch(train_samples)
+#valid_gen = generate_batch(validation_samples)
         
         
         
