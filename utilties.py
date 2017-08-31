@@ -11,11 +11,10 @@ import sklearn.utils
 from sklearn.model_selection import train_test_split
 import random
 DRIVING_FILE = 'data/driving_log.csv'
-CORRECTION = 0.23
+CORRECTION = 0.27
 
-lines = []
 def transform_csv_data(csv_file):
-
+    lines = []
     with open(csv_file) as file:
         reader = csv.reader(file)
         for line in reader:
@@ -48,21 +47,36 @@ def generate_batch(samples,batch_size = 64):
             X_batch = []
             y_batch = []
             for batch_sample in batch_samples:
-                rnd_image = np.random.randint(0,3)
-                image = cv2.imread('data/IMG/'+batch_sample[rnd_image].split('/')[-1])   
-                if rnd_image == 0:
-                    y_batch.append(float(batch_sample[3]))
-                elif rnd_image == 1:
-                    y_batch.append(float(batch_sample[3])+CORRECTION)
-                else:
-                    y_batch.append(float(batch_sample[3])-CORRECTION)    
-                X_batch.append(image)
+                for i in range(3):
+                    image = cv2.imread('data/IMG/'+batch_sample[i].split('/')[-1])   
+                    angle = float(batch_sample[3])
+                    if i == 1:
+                        angle = angle + CORRECTION
+                    elif i == 2:
+                        angle = angle - CORRECTION
+
+                    if angle < 0.001:
+                        if np.random.random() < 0.5:
+                            continue
+                                            
+                    X_batch.append(image)
+                    y_batch.append(angle)
+                    X_batch.append(np.fliplr(image))
+                    y_batch.append(-angle)                    
+                #rnd_image = np.random.randint(0,3)
+                #image = cv2.imread('data/IMG/'+batch_sample[rnd_image].split('/')[-1])   
+                #if rnd_image == 0:
+                #    y_batch.append(float(batch_sample[3]))
+                #elif rnd_image == 1:
+                #    y_batch.append(float(batch_sample[3])+CORRECTION)
+                #else:
+                #    y_batch.append(float(batch_sample[3])-CORRECTION)    
+                #X_batch.append(image)
                 
             X_batch = np.array(X_batch)
             y_batch = np.array(y_batch)
             yield X_batch,y_batch
-        
-        
+            
 #samples = get_csv_data(DRIVING_FILE)
 #train_samples, validation_samples = train_test_split(samples,test_size=0.2)
 
